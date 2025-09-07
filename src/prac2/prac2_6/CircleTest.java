@@ -14,14 +14,14 @@ public class CircleTest {
 
 
 
-        System.out.println("Радиус окружности после setR: " + circle1.getRadius());
-        System.out.println("Длина окружности cirlce2: " + circle2.getLen());
-        System.out.println("Площадь окружности cirlce1: " + circle1.getArea());
+        System.out.println("Радиус окружности после setR: " + circle1.getR());
+        System.out.println("Длина окружности cirlce2: " + circle2.Lcircle());
+        System.out.println("Площадь окружности cirlce1: " + circle1.Scircle());
 
         System.out.println();
-        circle1.equals(circle2);
+        circle1.srav(circle2);
         System.out.println();
-        circle3.equals(circle2);
+        circle3.srav(circle2);
 
     }
 }

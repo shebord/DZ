@@ -1,48 +1,38 @@
 package prac2.prac2_6;
 
 public class Circle {
-    private double radius;
+    private double r;
 
-    public Circle() {
-        this.radius = 1.0;
+    public Circle(Double r) {
+        this.r = r;
     }
 
-    public Circle(double radius) {
-        this.radius = radius;
+    public void setR(double r) {this.r = r;}
+    public double getR() {return r;}
+
+    public double Scircle() {
+        return Math.PI*(r*r);
     }
 
-    public Circle(double radius, String color) {
-        this.radius = radius;
+    public double Lcircle() {
+        return Math.PI*2*r;
     }
 
-    public double getRadius() {return radius;}
-
-    public void setRadius(double radius) {
-        if (radius > 0) {
-            this.radius = radius;
-        } else {
-            System.out.println("Радиус должен быть положительным числом!");
+    public boolean srav(Circle other) {
+        if (this.r == other.r) {
+            System.out.println("Окружности равны");
+            return true;
         }
-    }
-
-    public double getArea() {
-        return Math.PI * radius * radius;
-    }
-
-    public double getLen() {
-        return 2 * Math.PI * radius;
-    }
-
-    public boolean equals(Circle otherCircle) {
-        if (otherCircle == null) {
+        else {
+            System.out.println("Окружности не равны");
             return false;
         }
-        return Math.abs(this.radius - otherCircle.radius) < 0.000001;
     }
 
     @Override
     public String toString() {
-        return String.format("Circle[radius=%.2f, area=%.2f, Len=%.2f]",
-                radius, getArea(), getLen());
+        return  "Радиус: " + r + "\n" +
+                "Длина: " + Lcircle() + "\n" +
+                "Площадь" + Scircle() + "\n";
     }
 }
