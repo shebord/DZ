@@ -2,7 +2,6 @@ package prac2.prac2_6;
 
 public class Circle {
     private double radius;
-    private String color;
 
     public Circle() {
         this.radius = 1.0;
