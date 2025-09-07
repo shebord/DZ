@@ -1,6 +1,5 @@
 package prac2.prac2_6;
 
-
 public class CircleTest {
     public static void main(String[] args) {
         Circle circle1 = new Circle(3.0);
