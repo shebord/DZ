@@ -1,4 +1,4 @@
-package prac10_to_19.prac_15;
+package prac10_to_19.prac15.prac15_4;
 
 import javax.swing.*;
 import java.awt.*;
@@ -7,8 +7,9 @@ import java.awt.event.ActionListener;
 
 public class Calculator extends JFrame implements ActionListener {
     private JTextField display;
-    private double firstNumber, secondNumber, result;
+    private double firstNumber, result;
     private String operator;
+    private boolean newInput;
 
     public Calculator() {
         setTitle("Калькулятор");
@@ -25,26 +26,32 @@ public class Calculator extends JFrame implements ActionListener {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        display = new JTextField();
-        display.setFont(new Font("Arial", Font.BOLD, 20));
+        display = new JTextField("0");
+        display.setFont(new Font("Arial", Font.BOLD, 24));
         display.setHorizontalAlignment(JTextField.RIGHT);
         display.setEditable(false);
         display.setBackground(Color.WHITE);
         mainPanel.add(display, BorderLayout.NORTH);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(4, 4, 5, 5));
+        JPanel buttonPanel = new JPanel(new GridLayout(5, 4, 5, 5));
 
         String[] buttons = {
                 "7", "8", "9", "/",
                 "4", "5", "6", "*",
                 "1", "2", "3", "-",
-                "0", ".", "=", "+"
+                "C", "0", ".", "+",
+                "", "", "=", ""
         };
 
         for (String text : buttons) {
             JButton button = new JButton(text);
             button.setFont(new Font("Arial", Font.BOLD, 18));
             button.addActionListener(this);
+
+            if (text.equals("C") || text.equals("=")) {
+                button.setBackground(Color.ORANGE);
+            }
+
             buttonPanel.add(button);
         }
 
@@ -56,22 +63,50 @@ public class Calculator extends JFrame implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
 
-        if (command.charAt(0) >= '0' && command.charAt(0) <= '9' || command.equals(".")) {
-            display.setText(display.getText() + command);
-        } else if (command.equals("=")) {
+        if (display.getText().equals("Ошибка") && !command.equals("C")) {
+            display.setText("0");
+            firstNumber = 0;
+            operator = null;
+            newInput = true;
+        }
+
+        if (command.equals("C")) {
+            display.setText("0");
+            firstNumber = 0;
+            operator = null;
+            newInput = true;
+        }
+        else if (command.equals("=")) {
             calculateResult();
-        } else {
-            if (!display.getText().isEmpty()) {
+        }
+        else if (command.matches("[0-9]")) {
+            if (display.getText().equals("0") || newInput) {
+                display.setText(command);
+                newInput = false;
+            } else {
+                display.setText(display.getText() + command);
+            }
+        }
+        else if (command.equals(".")) {
+            if (newInput) {
+                display.setText("0.");
+                newInput = false;
+            } else if (!display.getText().contains(".")) {
+                display.setText(display.getText() + ".");
+            }
+        }
+        else {
+            if (!display.getText().isEmpty() && !display.getText().equals("Ошибка")) {
                 firstNumber = Double.parseDouble(display.getText());
                 operator = command;
-                display.setText("");
+                newInput = true;
             }
         }
     }
 
     private void calculateResult() {
-        if (operator != null && !display.getText().isEmpty()) {
-            secondNumber = Double.parseDouble(display.getText());
+        if (operator != null && !newInput) {
+            double secondNumber = Double.parseDouble(display.getText());
 
             switch (operator) {
                 case "+":
@@ -88,6 +123,8 @@ public class Calculator extends JFrame implements ActionListener {
                         result = firstNumber / secondNumber;
                     } else {
                         display.setText("Ошибка");
+                        operator = null;
+                        newInput = true;
                         return;
                     }
                     break;
@@ -100,16 +137,11 @@ public class Calculator extends JFrame implements ActionListener {
             }
 
             operator = null;
+            newInput = true;
         }
     }
 
     public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         SwingUtilities.invokeLater(() -> new Calculator());
     }
 }

@@ -1,4 +1,4 @@
-package prac10_to_19.prac_16;
+package prac10_to_19.prac16;
 
 import javax.swing.*;
 import java.awt.*;
