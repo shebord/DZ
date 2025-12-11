@@ -3,11 +3,12 @@ package prac20_24.prac22;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.*;
 
 public class Task2 extends JFrame {
     private JTextField display;
     private StringBuilder currentInput = new StringBuilder();
+    private boolean lastWasOperator = false;
+    private boolean lastWasEquals = false;
 
     public Task2() {
         setTitle("какулятор");
@@ -27,7 +28,6 @@ public class Task2 extends JFrame {
                 "4", "5", "6", "+",
                 "1", "2", "3", "-",
                 "", "0", ".", "=",
-
         };
 
         for (String text : buttons) {
@@ -53,29 +53,83 @@ public class Task2 extends JFrame {
     private class ButtonListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             String command = ((JButton) e.getSource()).getText();
+
             switch (command) {
                 case "=":
                     calculateResult();
+                    lastWasEquals = true;
                     break;
 
                 case "C":
                     currentInput.setLength(0);
                     display.setText("");
+                    lastWasOperator = false;
+                    lastWasEquals = false;
                     break;
 
                 case "<":
                     if (currentInput.length() > 0) {
+                        char lastChar = currentInput.charAt(currentInput.length() - 1);
                         currentInput.deleteCharAt(currentInput.length() - 1);
                         display.setText(currentInput.toString());
+                        lastWasOperator = isOperator(lastChar);
                     }
                     break;
 
                 default:
-                    currentInput.append(command);
-                    display.setText(currentInput.toString());
+                    handleInput(command);
                     break;
             }
         }
+    }
+
+    private void handleInput(String command) {
+        if (lastWasEquals) {
+            currentInput.setLength(0);
+            lastWasEquals = false;
+        }
+
+        char inputChar = command.charAt(0);
+
+        if (Character.isDigit(inputChar) || inputChar == '.') {
+            if (inputChar == '.') {
+                int i = currentInput.length() - 1;
+                while (i >= 0) {
+                    char c = currentInput.charAt(i);
+                    if (c == '.') {
+                        return; // Уже есть точка в этом числе
+                    }
+                    if (isOperator(c)) {
+                        break;
+                    }
+                    i--;
+                }
+            }
+            currentInput.append(command);
+            lastWasOperator = false;
+        } else if (isOperator(inputChar)) {
+            // Оператор
+            if (currentInput.length() == 0 && inputChar != '-') {
+                return;
+            }
+
+            if (lastWasOperator && inputChar == '-') {
+                currentInput.append(command);
+                lastWasOperator = false;
+            } else if (!lastWasOperator) {
+                currentInput.append(command);
+                lastWasOperator = true;
+            } else {
+                currentInput.deleteCharAt(currentInput.length() - 1);
+                currentInput.append(command);
+            }
+        }
+
+        display.setText(currentInput.toString());
+    }
+
+    private boolean isOperator(char c) {
+        return c == '+' || c == '-' || c == '*' || c == '/' || c == '^';
     }
 
     private void calculateResult() {
@@ -84,18 +138,21 @@ public class Task2 extends JFrame {
 
             if (expression.isEmpty()) {
                 display.setText("0");
-                currentInput.setLength(0);
-                currentInput.append("0");
                 return;
             }
 
-            double result = evaluateExpression(expression);
+            double result = evaluateWithJavaScript(expression);
 
+            result = Math.round(result * 1000.0) / 1000.0;
 
-            result = Math.round(result * 1e3) / 1e3;
+            if (result == (int)result) {
+                currentInput.setLength(0);
+                currentInput.append((int)result);
+            } else {
+                currentInput.setLength(0);
+                currentInput.append(result);
+            }
 
-            currentInput.setLength(0);
-            currentInput.append(result);
             display.setText(currentInput.toString());
 
         } catch (Exception ex) {
@@ -104,84 +161,126 @@ public class Task2 extends JFrame {
         }
     }
 
-    private double evaluateExpression(String expression) {
-        expression = expression.replaceAll("\\s+", "");
-        return parseAddition(expression);
-    }
-
-    private double parseAddition(String expr) {
-        String[] parts = expr.split("(?=[+-])|(?<=[+-])");
-
-        if (parts.length == 1) {
-            return parseMultiplication(expr);
-        }
-
-        double result = parseMultiplication(parts[0]);
-
-        for (int i = 1; i < parts.length; i += 2) {
-            String operator = parts[i];
-            double value = parseMultiplication(parts[i + 1]);
-
-            if (operator.equals("+")) {
-                result += value;
-            } else if (operator.equals("-")) {
-                result -= value;
-            }
-        }
-
-        return result;
-    }
-
-    private double parseMultiplication(String expr) {
-        String[] parts = expr.split("(?=[*/^])|(?<=[*/^])");
-
-        if (parts.length == 1) {
-            return parsePower(expr);
-        }
-
-        double result = parsePower(parts[0]);
-
-        for (int i = 1; i < parts.length; i += 2) {
-            String operator = parts[i];
-            double value = parsePower(parts[i + 1]);
-
-            if (operator.equals("*")) {
-                result *= value;
-            } else if (operator.equals("/")) {
-                if (value == 0) {
-                    throw new ArithmeticException("Деление на ноль");
-                }
-                result /= value;
-            } else if (operator.equals("^")) {
-                result = Math.pow(result, value);
-            }
-        }
-
-        return result;
-    }
-
-    private double parsePower(String expr) {
-        String[] parts = expr.split("\\^", -1);
-
-        if (parts.length == 1) {
-            return parseNumber(expr);
-        }
-
-        double result = parseNumber(parts[parts.length - 1]);
-
-        for (int i = parts.length - 2; i >= 0; i--) {
-            result = Math.pow(parseNumber(parts[i]), result);
-        }
-
-        return result;
-    }
-
-    private double parseNumber(String expr) {
+    private double evaluateWithJavaScript(String expression) {
         try {
-            return Double.parseDouble(expr);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Некорректное число: " + expr);
+            String jsExpression = expression
+                    .replace("^", "**")  // Заменяем ^ на ** для JS
+                    .replace(",", ".");   // Заменяем запятые на точки
+
+            jsExpression = jsExpression.replaceAll("(?<=[\\+\\-*/])-", "m");
+            jsExpression = jsExpression.replaceAll("^-", "m");
+            jsExpression = jsExpression.replace("m", "-");
+
+            return parseSimpleExpression(jsExpression);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка вычисления: " + e.getMessage());
         }
+    }
+
+    private double parseSimpleExpression(String expr) {
+        expr = expr.replaceAll("\\s+", "");
+
+        while (expr.contains("**")) {
+            int idx = expr.lastIndexOf("**");
+            String left = getLeftOperand(expr, idx);
+            String right = getRightOperand(expr, idx + 2);
+            double leftVal = Double.parseDouble(left);
+            double rightVal = Double.parseDouble(right);
+            double result = Math.pow(leftVal, rightVal);
+            expr = replacePart(expr, idx - left.length(), idx + 2 + right.length(), result);
+        }
+
+        while (expr.contains("*") || expr.contains("/")) {
+            int mulIdx = expr.indexOf("*");
+            int divIdx = expr.indexOf("/");
+            int idx;
+
+            if (mulIdx == -1) idx = divIdx;
+            else if (divIdx == -1) idx = mulIdx;
+            else idx = Math.min(mulIdx, divIdx);
+
+            char op = expr.charAt(idx);
+            String left = getLeftOperand(expr, idx);
+            String right = getRightOperand(expr, idx + 1);
+            double leftVal = Double.parseDouble(left);
+            double rightVal = Double.parseDouble(right);
+            double result;
+
+            if (op == '*') {
+                result = leftVal * rightVal;
+            } else {
+                if (rightVal == 0) throw new ArithmeticException("Деление на ноль");
+                result = leftVal / rightVal;
+            }
+
+            expr = replacePart(expr, idx - left.length(), idx + 1 + right.length(), result);
+        }
+
+        while (expr.contains("+") || (expr.contains("-") && expr.length() > 1 && !expr.startsWith("-"))) {
+            for (int i = 1; i < expr.length(); i++) {
+                char c = expr.charAt(i);
+                if (c == '+' || c == '-') {
+                    String left = getLeftOperand(expr, i);
+                    String right = getRightOperand(expr, i + 1);
+                    double leftVal = Double.parseDouble(left);
+                    double rightVal = Double.parseDouble(right);
+                    double result = (c == '+') ? leftVal + rightVal : leftVal - rightVal;
+                    expr = replacePart(expr, i - left.length(), i + 1 + right.length(), result);
+                    break;
+                }
+            }
+        }
+
+        return Double.parseDouble(expr);
+    }
+
+    private String getLeftOperand(String expr, int operatorIdx) {
+        int start = operatorIdx - 1;
+        while (start >= 0) {
+            char c = expr.charAt(start);
+            if (c == '+' || c == '-' || c == '*' || c == '/') {
+                if (start == 0 && c == '-') {
+                    break;
+                }
+                if (start > 0 && expr.charAt(start - 1) != 'e' &&
+                        !(expr.charAt(start - 1) == 'E')) {
+                    break;
+                }
+            }
+            start--;
+        }
+        return expr.substring(start + 1, operatorIdx);
+    }
+
+    private String getRightOperand(String expr, int operatorIdx) {
+        int end = operatorIdx;
+        boolean hasDecimal = false;
+
+        while (end < expr.length()) {
+            char c = expr.charAt(end);
+            if (c == '+' || c == '-' || c == '*' || c == '/') {
+                if (end == operatorIdx && c == '-') {
+                    end++;
+                    continue;
+                }
+                break;
+            }
+            end++;
+        }
+        return expr.substring(operatorIdx, end);
+    }
+
+    private String replacePart(String expr, int start, int end, double value) {
+        String left = expr.substring(0, start);
+        String right = expr.substring(end);
+        String valStr = String.valueOf(value);
+
+        if (valStr.endsWith(".0")) {
+            valStr = valStr.substring(0, valStr.length() - 2);
+        }
+
+        return left + valStr + right;
     }
 
     public static void main(String[] args) {
